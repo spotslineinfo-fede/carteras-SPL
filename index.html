@@ -408,10 +408,10 @@ function showApp() {
   var act=currentClientes.filter(function(c){return c.estado==='Activo';}).length;
   var inact=currentClientes.filter(function(c){return c.estado==='Inactivo';}).length;
   document.getElementById('st-total').textContent=currentClientes.length;
-  renderMiniDash(currentClientes);
   document.getElementById('st-activos').textContent=act;
   document.getElementById('st-inactivos').textContent=inact;
   renderList();
+  renderMiniDash(currentClientes);
 }
 
 window.setFilter=function(f) {
@@ -851,6 +851,126 @@ function renderAcuerdos(nombre) {
 }
 
 
+
+function calcMiniDash(clientes) {
+  var hoy = new Date();
+  var deudaTotal=0, deudaVenc=0, clientesDeuda=0, acuerdoOk=0, faltaTotal=0;
+  clientes.forEach(function(c){
+    var fa = APP_DATA.facturas && APP_DATA.facturas[c.nombre];
+    var ac = APP_DATA.acuerdos && APP_DATA.acuerdos[c.nombre];
+    if(fa && fa.length) {
+      var dt=0, dv=0;
+      fa.forEach(function(f){
+        dt += f.importe_pendiente||0;
+        var vd = f.fecha_venc ? new Date(f.fecha_venc) : null;
+        if(vd && vd < hoy) dv += f.importe_pendiente||0;
+      });
+      if(dt>0){ deudaTotal+=dt; deudaVenc+=dv; clientesDeuda++; }
+    }
+    if(ac){
+      if(ac.falta_junio<=0) acuerdoOk++;
+      else faltaTotal+=ac.falta_junio;
+    }
+  });
+  return {deudaTotal:deudaTotal,deudaVenc:deudaVenc,clientesDeuda:clientesDeuda,acuerdoOk:acuerdoOk,faltaTotal:faltaTotal};
+}
+
+function renderMiniDash(clientes) {
+  var d = calcMiniDash(clientes);
+  var dash = document.getElementById('mini-dash');
+  if(!dash) return;
+  if(d.deudaTotal===0 && d.faltaTotal===0 && d.acuerdoOk===0) { dash.style.display='none'; return; }
+  dash.style.display='block';
+  document.getElementById('dash-deuda-total').textContent = fmt2(d.deudaTotal);
+  document.getElementById('dash-deuda-venc').textContent  = fmt2(d.deudaVenc);
+  document.getElementById('dash-clientes-deuda').textContent = d.clientesDeuda;
+  document.getElementById('dash-acuerdo-ok').textContent  = d.acuerdoOk;
+  document.getElementById('dash-falta-total').textContent = fmt2(d.faltaTotal);
+}
+
+function roundRect(ctx,x,y,w,h,r,fill){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+}
+
+window.generarResumenAcuerdo = function() {
+  var c=currentClientes[currentModalIdx];
+  var ac=(APP_DATA.acuerdos&&APP_DATA.acuerdos[c.nombre])||null;
+  var hoy=new Date();
+  var canvas=document.getElementById('share-canvas');
+  var ctx=canvas.getContext('2d');
+  canvas.width=600;canvas.height=520;
+  ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,600,520);
+  var grad=ctx.createLinearGradient(0,0,600,0);
+  grad.addColorStop(0,'#1F3864');grad.addColorStop(1,'#2d5299');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,600,80);
+  ctx.fillStyle='white';ctx.font='bold 22px Arial';ctx.fillText('SPL Distribuidora',24,34);
+  ctx.font='14px Arial';ctx.fillStyle='rgba(255,255,255,.75)';ctx.fillText('Resumen de Acuerdo Comercial',24,58);
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='12px Arial';
+  var fechaStr=hoy.toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  ctx.fillText(fechaStr,600-ctx.measureText(fechaStr).width-20,50);
+  ctx.fillStyle='#1F3864';ctx.font='bold 20px Arial';
+  var nom=c.nombre.length>40?c.nombre.substring(0,40)+'...':c.nombre;
+  ctx.fillText(nom,24,118);
+  ctx.strokeStyle='#dde3ed';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(24,130);ctx.lineTo(576,130);ctx.stroke();
+  if(ac){
+    roundRect(ctx,20,142,270,100,10,'#ffffff');
+    ctx.fillStyle='#aaa';ctx.font='11px Arial';ctx.fillText('LISTA ASIGNADA',36,164);
+    ctx.fillStyle='#1F3864';ctx.font='bold 15px Arial';ctx.fillText(ac.lista_asignada,36,184);
+    ctx.fillStyle='#aaa';ctx.font='11px Arial';ctx.fillText('DESCUENTO',36,208);
+    ctx.fillStyle='#1D6A27';ctx.font='bold 18px Arial';ctx.fillText(ac.descuento+'%',36,228);
+    roundRect(ctx,310,142,270,100,10,'#ffffff');
+    ctx.fillStyle='#aaa';ctx.font='11px Arial';ctx.fillText('META TRIMESTRAL',326,164);
+    ctx.fillStyle='#1F3864';ctx.font='bold 15px Arial';ctx.fillText(fmt2(ac.meta_trim),326,184);
+    ctx.fillStyle='#aaa';ctx.font='11px Arial';ctx.fillText('META MENSUAL',326,208);
+    ctx.fillStyle='#555';ctx.font='bold 14px Arial';ctx.fillText(fmt2(ac.meta_mensual),326,228);
+    var meses=[['Abril',ac.abril],['Mayo',ac.mayo],['Junio',ac.junio]];
+    meses.forEach(function(m,i){
+      var isJ=i===2;
+      roundRect(ctx,20+i*190,258,180,80,10,isJ?'#eef2ff':'#f8f9fa');
+      ctx.fillStyle='#aaa';ctx.font='11px Arial';ctx.fillText(m[0].toUpperCase(),34+i*190,278);
+      ctx.fillStyle=isJ?'#1F3864':'#333';ctx.font='bold 16px Arial';ctx.fillText(fmt2(m[1]),34+i*190,302);
+      if(isJ&&ac.falta_junio>0){ctx.fillStyle='#A32D2D';ctx.font='11px Arial';ctx.fillText('Falta: '+fmt2(ac.falta_junio),34+i*190,324);}
+      else if(isJ&&ac.falta_junio<=0){ctx.fillStyle='#1D6A27';ctx.font='bold 11px Arial';ctx.fillText('META CUMPLIDA!',34+i*190,324);}
+    });
+    var prog=ac.pct_trim||0;
+    roundRect(ctx,20,354,560,60,10,'#ffffff');
+    ctx.fillStyle='#555';ctx.font='bold 12px Arial';ctx.fillText('Progreso trimestral: '+prog+'%',36,376);
+    roundRect(ctx,36,384,528,14,7,'#e5e7eb');
+    var fw=Math.round(528*prog/100);
+    if(fw>0) roundRect(ctx,36,384,fw,14,7,prog>=100?'#16a34a':(prog>=50?'#f59e0b':'#ef4444'));
+    var fc=ac.falta_junio<=0?'#e8f5e9':'#fce4e4';
+    var ftc=ac.falta_junio<=0?'#1D6A27':'#A32D2D';
+    roundRect(ctx,20,428,560,56,10,fc);
+    ctx.fillStyle=ftc;ctx.font='bold 13px Arial';
+    var msg=ac.falta_junio<=0?'Felicitaciones! Ya cumpliste tu meta trimestral.':'Te faltan '+fmt2(ac.falta_junio)+' para cumplir tu acuerdo trimestral en Junio.';
+    ctx.fillText(msg,36,452);
+    ctx.fillStyle=ftc;ctx.font='12px Arial';
+    ctx.fillText('Acumulado: '+fmt2(ac.ya_comprado)+' / Meta: '+fmt2(ac.meta_trim),36,472);
+  } else {
+    ctx.fillStyle='#aaa';ctx.font='16px Arial';ctx.fillText('Sin acuerdo registrado para este cliente.',24,180);
+  }
+  document.getElementById('share-overlay').classList.add('open');
+}
+
+window.downloadShareImage = function() {
+  var canvas=document.getElementById('share-canvas');
+  var c=currentClientes[currentModalIdx];
+  var link=document.createElement('a');
+  link.download='acuerdo_'+c.nombre.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30)+'.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+}
+
+window.closeShare = function() {
+  document.getElementById('share-overlay').classList.remove('open');
+}
 </script>
 
 <div class="share-canvas-wrap" id="share-overlay">
