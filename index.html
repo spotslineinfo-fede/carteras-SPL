@@ -139,6 +139,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mini-bar-track{flex:1;background:#f0f0f0;border-radius:3px;height:8px;overflow:hidden}
 .mini-bar-fill{height:100%;border-radius:3px}
 .mini-bar-val{font-size:.65rem;color:#888;width:18px}
+
+.cta-cte-section{margin-bottom:16px}
+.saldo-total{display:flex;justify-content:space-between;align-items:center;background:#fff8f0;border:1px solid #fcd9b0;border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.saldo-label{font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase}
+.saldo-monto{font-size:1.1rem;font-weight:800;color:var(--rojo)}
+.saldo-monto.ok{color:var(--verde)}
+.factura-item{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--borde);gap:8px}
+.factura-item:last-child{border-bottom:none}
+.factura-num{font-size:.78rem;font-weight:700;color:var(--azul)}
+.factura-fecha{font-size:.7rem;color:#aaa;margin-top:1px}
+.factura-monto{font-size:.82rem;font-weight:700;color:var(--texto);text-align:right;white-space:nowrap}
+.factura-vencida .factura-num{color:var(--rojo)}
+.factura-vencida .factura-fecha{color:var(--rojo)}
+.tag-vencida{font-size:.6rem;background:var(--rojo-bg);color:var(--rojo);padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px}
+.tag-parcial{font-size:.6rem;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px}
+.acuerdo-header{background:linear-gradient(135deg,#eef2ff,#f0fdf4);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.acuerdo-lista{font-size:.78rem;font-weight:700;color:var(--azul)}
+.acuerdo-desc-badge{font-size:.8rem;font-weight:800;background:var(--verde-bg);color:var(--verde);padding:3px 10px;border-radius:20px}
+.acuerdo-meses{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.mes-card{background:var(--gris);border-radius:8px;padding:8px;text-align:center}
+.mes-label{font-size:.65rem;color:#aaa;text-transform:uppercase;margin-bottom:3px}
+.mes-monto{font-size:.8rem;font-weight:700;color:var(--texto)}
+.mes-card.junio{background:#eef2ff;border:1px solid #c7d2fe}
+.mes-card.junio .mes-monto{color:var(--azul)}
+.progress-section{margin-bottom:6px}
+.progress-header{display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:4px}
+.progress-label{color:#666;font-weight:600}
+.progress-pct{font-weight:800;color:var(--azul)}
+.progress-track{background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden}
+.progress-fill{height:100%;border-radius:6px;transition:width .5s}
+.progress-fill.ok{background:#16a34a}
+.progress-fill.mid{background:#f59e0b}
+.progress-fill.low{background:#ef4444}
+.falta-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--borde);margin-top:6px}
+.falta-label{font-size:.75rem;color:#888}
+.falta-monto{font-size:.88rem;font-weight:800;color:var(--rojo)}
+.falta-monto.cumplido{color:var(--verde)}
+.acuerdo-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--borde)}
+.acuerdo-row:last-child{border-bottom:none}
+.acuerdo-label{font-size:.78rem;color:#555}
+.acuerdo-valor{font-size:.82rem;font-weight:700;color:var(--azul)}
+.acuerdo-descuento{font-size:.82rem;font-weight:700;color:var(--verde)}
+.sin-datos{font-size:.8rem;color:#bbb;text-align:center;padding:12px 0;font-style:italic}
 </style>
 </head>
 <body>
@@ -223,6 +266,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="modal-section-title">Datos del cliente</div>
       <div class="info-grid" id="m-info-grid"></div>
     </div>
+    
+    <div class="modal-section" id="cta-cte-section">
+      <div class="modal-section-title">&#128179; Cuenta Corriente</div>
+      <div id="m-cta-cte"></div>
+    </div>
+    <div class="modal-section" id="acuerdos-section">
+      <div class="modal-section-title">&#129309; Acuerdos</div>
+      <div id="m-acuerdos"></div>
+    </div>
+
     <div class="modal-section">
       <div class="modal-section-title">Seguimiento</div>
       <div class="seguimiento-fields">
@@ -250,6 +303,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script src="data.js"></script>
+
+
+
+
+
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -471,6 +530,14 @@ window.openModal=function(idx,vendedor) {
   if(c.email) grid+='<div class="info-item full"><div class="info-label">Email</div><div class="info-value" style="font-size:.78rem;word-break:break-all">'+c.email+'</div></div>';
   grid+='<div class="info-item full"><div class="info-label">Total facturado</div><div class="info-value" style="color:var(--azul)">'+fmt(c.total_facturado)+'</div></div>';
   document.getElementById('m-info-grid').innerHTML=grid;
+  // Cuenta Corriente
+  var ctaCteHtml = renderCtaCte(c.nombre);
+  document.getElementById('m-cta-cte').innerHTML = ctaCteHtml;
+
+  // Acuerdos
+  var acuerdosHtml = renderAcuerdos(c.nombre);
+  document.getElementById('m-acuerdos').innerHTML = acuerdosHtml;
+
   document.getElementById('seg-etapa').value=n.etapa||'1. Localizar';
   document.getElementById('seg-via').value=n.via||'';
   document.getElementById('seg-resultado').value=n.resultado||'';
@@ -624,6 +691,82 @@ window.adminTab = function(tab) {
   else if(tab==='resumen') renderAdminResumen();
 }
 
-</script>
-</body>
-</html>
+
+// ── DATOS DEMO — se reemplazan con data.js real ──
+// Estructura esperada en APP_DATA:
+// APP_DATA.facturas[nombreCliente] = [{numero, fecha_venc, importe_pendiente, importe_total, estado}]
+// APP_DATA.acuerdos[nombreCliente] = {lista_precios, descuento_prom, ultima_compra}
+
+function fmt2(n){ return n?'$'+Math.round(n).toLocaleString('es-AR'):'$0'; }
+
+function renderCtaCte(nombre) {
+  var facturas = (APP_DATA.facturas && APP_DATA.facturas[nombre]) || [];
+  if(!facturas.length) return '<div class="sin-datos">Sin facturas pendientes</div>';
+
+  var hoy = new Date();
+  var totalPendiente = 0;
+  facturas.forEach(function(f){ totalPendiente += f.importe_pendiente||0; });
+
+  var colorSaldo = totalPendiente > 0 ? '' : ' ok';
+  var html = '<div class="saldo-total"><div><div class="saldo-label">Saldo pendiente total</div></div>';
+  html += '<div class="saldo-monto'+colorSaldo+'">'+fmt2(totalPendiente)+'</div></div>';
+
+  facturas.forEach(function(f){
+    var venc = f.fecha_venc ? new Date(f.fecha_venc) : null;
+    var vencida = venc && venc < hoy;
+    var cls = vencida ? ' factura-vencida' : '';
+    var tag = vencida ? '<span class="tag-vencida">VENCIDA</span>' : (f.estado==='Pagado parcialmente'?'<span class="tag-parcial">PARCIAL</span>':'');
+    var fechaStr = venc ? venc.toLocaleDateString('es-AR') : '-';
+    html += '<div class="factura-item'+cls+'">';
+    html += '<div><div class="factura-num">'+f.numero+tag+'</div><div class="factura-fecha">Vence: '+fechaStr+'</div></div>';
+    html += '<div class="factura-monto">'+fmt2(f.importe_pendiente)+'</div>';
+    html += '</div>';
+  });
+  return html;
+}
+
+function renderAcuerdos(nombre) {
+  var ac = (APP_DATA.acuerdos && APP_DATA.acuerdos[nombre]) || null;
+  if(!ac) return '<div class="sin-datos">Sin acuerdos registrados</div>';
+
+  var pct = ac.pct_trim || 0;
+  var fillClass = pct >= 100 ? 'ok' : (pct >= 50 ? 'mid' : 'low');
+  var faltaClass = ac.falta_junio <= 0 ? 'cumplido' : '';
+  var faltaTexto = ac.falta_junio <= 0 ? 'META CUMPLIDA!' : fmt2(ac.falta_junio);
+
+  var html = '';
+  // Header lista + descuento
+  html += '<div class="acuerdo-header">';
+  html += '<div><div class="acuerdo-lista">'+ac.lista_asignada+'</div>';
+  html += '<div style="font-size:.68rem;color:#888;margin-top:2px">Meta trimestral: '+fmt2(ac.meta_trim)+'</div></div>';
+  html += '<div class="acuerdo-desc-badge">'+ac.descuento+'%</div>';
+  html += '</div>';
+
+  // Compras por mes
+  html += '<div class="acuerdo-meses">';
+  html += '<div class="mes-card"><div class="mes-label">Abril</div><div class="mes-monto">'+fmt2(ac.abril)+'</div></div>';
+  html += '<div class="mes-card"><div class="mes-label">Mayo</div><div class="mes-monto">'+fmt2(ac.mayo)+'</div></div>';
+  html += '<div class="mes-card junio"><div class="mes-label">Junio</div><div class="mes-monto">'+fmt2(ac.junio)+'</div></div>';
+  html += '</div>';
+
+  // Acumulado trimestral
+  html += '<div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:6px;">';
+  html += '<span style="color:#666">Acumulado Abr+May+Jun:</span>';
+  html += '<span style="font-weight:700;color:var(--azul)">'+fmt2(ac.ya_comprado)+'</span>';
+  html += '</div>';
+
+  // Barra de progreso trimestral
+  html += '<div class="progress-section">';
+  html += '<div class="progress-header"><span class="progress-label">Progreso trimestral</span><span class="progress-pct">'+pct+'%</span></div>';
+  html += '<div class="progress-track"><div class="progress-fill '+fillClass+'" style="width:'+pct+'%"></div></div>';
+  html += '</div>';
+
+  // Falta para cumplir en Junio
+  html += '<div class="falta-row">';
+  html += '<div class="falta-label">Falta en Junio para cumplir:</div>';
+  html += '<div class="falta-monto '+faltaClass+'">'+faltaTexto+'</div>';
+  html += '</div>';
+
+  return html;
+}
+
