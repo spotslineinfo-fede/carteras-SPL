@@ -182,6 +182,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .acuerdo-valor{font-size:.82rem;font-weight:700;color:var(--azul)}
 .acuerdo-descuento{font-size:.82rem;font-weight:700;color:var(--verde)}
 .sin-datos{font-size:.8rem;color:#bbb;text-align:center;padding:12px 0;font-style:italic}
+
+.card-finanzas{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.fin-tag{font-size:.68rem;padding:2px 7px;border-radius:6px;font-weight:600}
+.fin-tag.deuda{background:#fce4e4;color:#A32D2D}
+.fin-tag.vencida{background:#fff0f0;color:#c0392b;border:1px solid #f5c6cb}
+.fin-tag.falta{background:#eef2ff;color:#1F3864}
+.fin-tag.ok{background:var(--verde-bg);color:var(--verde)}
+.btn-compartir{width:100%;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:12px;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.share-canvas-wrap{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:16px}
+.share-canvas-wrap.open{display:flex}
+.share-canvas-wrap canvas{border-radius:12px;max-width:100%;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.share-btns{display:flex;gap:10px}
+.share-btn{padding:10px 20px;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer}
+.share-btn.download{background:var(--azul);color:white}
+.share-btn.close{background:rgba(255,255,255,.2);color:white}
+
+.mini-dash{background:white;margin:12px 12px 0;border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.mini-dash-title{font-size:.7rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.mini-dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dash-item{background:var(--gris);border-radius:10px;padding:10px 12px}
+.dash-item.full{grid-column:1/-1}
+.dash-label{font-size:.65rem;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.dash-value{font-size:1rem;font-weight:800;color:var(--texto)}
+.dash-value.rojo{color:var(--rojo)}
+.dash-value.naranja{color:#e65100}
+.dash-value.verde{color:var(--verde)}
+.dash-value.azul{color:var(--azul)}
 </style>
 </head>
 <body>
@@ -214,6 +241,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="stat-card"><div class="stat-num verde" id="st-activos">0</div><div class="stat-lbl">Activos</div></div>
     <div class="stat-card"><div class="stat-num rojo" id="st-inactivos">0</div><div class="stat-lbl">Inactivos</div></div>
   </div>
+  <div class="mini-dash" id="mini-dash" style="display:none">
+    <div class="mini-dash-title">&#128200; Resumen financiero</div>
+    <div class="mini-dash-grid">
+      <div class="dash-item"><div class="dash-label">Deuda total</div><div class="dash-value rojo" id="dash-deuda-total">$0</div></div>
+      <div class="dash-item"><div class="dash-label">Deuda vencida</div><div class="dash-value naranja" id="dash-deuda-venc">$0</div></div>
+      <div class="dash-item"><div class="dash-label">Clientes con deuda</div><div class="dash-value azul" id="dash-clientes-deuda">0</div></div>
+      <div class="dash-item"><div class="dash-label">Cumplen acuerdo</div><div class="dash-value verde" id="dash-acuerdo-ok">0</div></div>
+      <div class="dash-item full"><div class="dash-label">Falta total para acuerdos</div><div class="dash-value azul" id="dash-falta-total">$0</div></div>
+    </div>
+  </div>
+
   <div class="filters">
     <input class="search-box" type="text" id="search-input" placeholder="Buscar cliente, ciudad..." oninput="renderList()">
     <div class="filter-btns">
@@ -296,6 +334,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="seg-group"><label>Proxima accion</label><input type="text" id="seg-proxima" placeholder="ej: Llamar el lunes"></div>
         <div class="seg-group"><label>Comentarios</label><textarea id="seg-comentarios" placeholder="Notas libres..."></textarea></div>
       </div>
+      <button class="btn-compartir" id="btn-compartir" onclick="generarResumenAcuerdo()">&#128279; Generar resumen para cliente</button>
       <button class="btn-guardar" id="btn-guardar" onclick="guardarNota()">Guardar</button>
       <div class="save-ok" id="save-ok">Guardado correctamente</div>
     </div>
@@ -369,6 +408,7 @@ function showApp() {
   var act=currentClientes.filter(function(c){return c.estado==='Activo';}).length;
   var inact=currentClientes.filter(function(c){return c.estado==='Inactivo';}).length;
   document.getElementById('st-total').textContent=currentClientes.length;
+  renderMiniDash(currentClientes);
   document.getElementById('st-activos').textContent=act;
   document.getElementById('st-inactivos').textContent=inact;
   renderList();
@@ -410,6 +450,26 @@ function renderList() {
     if(c.ciudad) html+='<div class="card-meta"><span class="meta-item">'+c.ciudad+(c.provincia?' &mdash; '+c.provincia:'')+'</span></div>';
     if(c.ultima_compra) html+='<div class="card-meta"><span class="meta-item">Ultima compra: '+c.ultima_compra+'</span></div>';
     if(c.total_facturado) html+='<div class="card-total">'+fmt(c.total_facturado)+'</div>';
+    // Mini resumen financiero
+    var finHtml = '';
+    var fa = (APP_DATA.facturas && APP_DATA.facturas[c.nombre]);
+    var ac = (APP_DATA.acuerdos && APP_DATA.acuerdos[c.nombre]);
+    if(fa) {
+      var hoy = new Date();
+      var deudaTotal = 0, deudaVenc = 0;
+      fa.forEach(function(f){
+        deudaTotal += f.importe_pendiente||0;
+        var vd = f.fecha_venc ? new Date(f.fecha_venc) : null;
+        if(vd && vd < hoy) deudaVenc += f.importe_pendiente||0;
+      });
+      if(deudaTotal > 0) finHtml += '<span class="fin-tag deuda">Deuda: '+fmt(deudaTotal)+'</span>';
+      if(deudaVenc > 0)  finHtml += '<span class="fin-tag vencida">Venc: '+fmt(deudaVenc)+'</span>';
+    }
+    if(ac) {
+      if(ac.falta_junio <= 0) finHtml += '<span class="fin-tag ok">Acuerdo cumplido</span>';
+      else finHtml += '<span class="fin-tag falta">Falta: '+fmt(ac.falta_junio)+'</span>';
+    }
+    if(finHtml) html += '<div class="card-finanzas">'+finHtml+'</div>';
     html+=extra+'</div>';
   }
   list.innerHTML=html;
@@ -470,6 +530,26 @@ window.adminVerVendedor=function(v) {
     if(c.ciudad) html+='<div class="card-meta"><span class="meta-item">'+c.ciudad+'</span></div>';
     if(c.ultima_compra) html+='<div class="card-meta"><span class="meta-item">'+c.ultima_compra+'</span></div>';
     if(c.total_facturado) html+='<div class="card-total">'+fmt(c.total_facturado)+'</div>';
+    // Mini resumen financiero
+    var finHtml = '';
+    var fa = (APP_DATA.facturas && APP_DATA.facturas[c.nombre]);
+    var ac = (APP_DATA.acuerdos && APP_DATA.acuerdos[c.nombre]);
+    if(fa) {
+      var hoy = new Date();
+      var deudaTotal = 0, deudaVenc = 0;
+      fa.forEach(function(f){
+        deudaTotal += f.importe_pendiente||0;
+        var vd = f.fecha_venc ? new Date(f.fecha_venc) : null;
+        if(vd && vd < hoy) deudaVenc += f.importe_pendiente||0;
+      });
+      if(deudaTotal > 0) finHtml += '<span class="fin-tag deuda">Deuda: '+fmt(deudaTotal)+'</span>';
+      if(deudaVenc > 0)  finHtml += '<span class="fin-tag vencida">Venc: '+fmt(deudaVenc)+'</span>';
+    }
+    if(ac) {
+      if(ac.falta_junio <= 0) finHtml += '<span class="fin-tag ok">Acuerdo cumplido</span>';
+      else finHtml += '<span class="fin-tag falta">Falta: '+fmt(ac.falta_junio)+'</span>';
+    }
+    if(finHtml) html += '<div class="card-finanzas">'+finHtml+'</div>';
     html+=extra+'</div>';
   }
   document.getElementById('admin-content').innerHTML=html;
@@ -772,5 +852,14 @@ function renderAcuerdos(nombre) {
 
 
 </script>
+
+<div class="share-canvas-wrap" id="share-overlay">
+  <canvas id="share-canvas"></canvas>
+  <div class="share-btns">
+    <button class="share-btn download" onclick="downloadShareImage()">&#128190; Guardar imagen</button>
+    <button class="share-btn close" onclick="closeShare()">Cerrar</button>
+  </div>
+</div>
+
 </body>
 </html>
